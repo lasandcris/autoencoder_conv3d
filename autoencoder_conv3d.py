@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import os
 
 from tensorflow.examples.tutorials.mnist import input_data
 mnist = input_data.read_data_sets('MNIST_data', validation_size=0)
@@ -9,7 +10,6 @@ img = mnist.train.images[2]
 
 inputs_ = tf.placeholder(tf.float32, (None, None, 28, 28, 1), name='inputs')
 targets_ = tf.placeholder(tf.float32, (None, None, 28, 28, 1), name='targets')
-
 
 
 ### Encoder
@@ -38,13 +38,11 @@ loss = tf.nn.sigmoid_cross_entropy_with_logits(labels=targets_, logits=logits)
 cost = tf.reduce_mean(loss)
 opt = tf.train.AdamOptimizer(0.001).minimize(cost)
 
-
 sess = tf.Session()
-
 
 epochs = 1
 # the batch size is representing 20 batches of 10 frames of images 10x20
-batch_size = 200
+batch_size = 16
 
 noise_factor = 0.5
 sess.run(tf.global_variables_initializer())
@@ -55,7 +53,7 @@ for e in range(epochs):
         # reshaping the batch (numberOfFrames == 10, batchSize == 20, imgWidth, imgHeight, channels)
         # this is to match the conv3d inputs
         # not sure why this is not working if its reshaped to (20, 10, 28, 28, 1)
-        imgs = batch[0].reshape((10, 20, 28, 28, 1))
+        imgs = batch[0].reshape((1, 16, 28, 28, 1))
         
         # Add random noise to the input images
         noisy_imgs = imgs + noise_factor * np.random.randn(*imgs.shape)
@@ -68,38 +66,43 @@ for e in range(epochs):
         print("Epoch: {}/{}...".format(e+1, epochs),
               "Training loss: {:.4f}".format(batch_cost))
 
-#fig, axes = plt.subplots(nrows=2, ncols=10, sharex=True, sharey=True, figsize=(20,4))
-#in_imgs = mnist.test.images[:10]
-#reconstructed = sess.run(decoded, feed_dict={inputs_: in_imgs.reshape((1, 10, 28, 28, 1))})
+fig, axes = plt.subplots(nrows=2, ncols=16, sharex=True, sharey=True, figsize=(20,4))
+in_imgs = mnist.test.images[:16]
+reconstructed = sess.run(decoded, feed_dict={inputs_: in_imgs.reshape((1, 16, 28, 28, 1))})
 
-#for images, row in zip([in_imgs, reconstructed], axes):
-#    for img, ax in zip(images, row):
-#        ax.imshow(img.reshape((28, 28)), cmap='Greys_r')
-#        ax.get_xaxis().set_visible(False)
-#        ax.get_yaxis().set_visible(False)
+reconstructed = reconstructed.reshape((16,784))
+print(reconstructed.shape)
+print(in_imgs.shape)
 
+#print(reconstructed[0]
+
+
+for images, row in zip([in_imgs, reconstructed], axes):
+    for img, ax in zip(images, row):
+        ax.imshow(img.reshape((28, 28)), cmap='Greys_r')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+plt.show()
+
+
+fig, axes = plt.subplots(nrows=2, ncols=16, sharex=True, sharey=True, figsize=(20,4))
+in_imgs = mnist.test.images[:16]
+noisy_imgs = in_imgs + noise_factor * np.random.randn(*in_imgs.shape)
+noisy_imgs = np.clip(noisy_imgs, 0., 1.)
+
+reconstructed = sess.run(decoded, feed_dict={inputs_: noisy_imgs.reshape((1, 16, 28, 28, 1))})
+reconstructed = reconstructed.reshape((16,784))
+
+for images, row in zip([noisy_imgs, reconstructed], axes):
+    for img, ax in zip(images, row):
+        ax.imshow(img.reshape((28, 28)), cmap='Greys_r')
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
 
 #fig.tight_layout(pad=0.1)
 
-#plt.show()
 
-
-#fig, axes = plt.subplots(nrows=2, ncols=10, sharex=True, sharey=True, figsize=(20,4))
-#in_imgs = mnist.test.images[:10]
-#noisy_imgs = in_imgs + noise_factor * np.random.randn(*in_imgs.shape)
-#noisy_imgs = np.clip(noisy_imgs, 0., 1.)
-
-#reconstructed = sess.run(decoded, feed_dict={inputs_: noisy_imgs.reshape((10, 1, 28, 28, 1))})
-
-#for images, row in zip([noisy_imgs, reconstructed], axes):
-#    for img, ax in zip(images, row):
-#        ax.imshow(img.reshape((28, 28)), cmap='Greys_r')
-#        ax.get_xaxis().set_visible(False)
-#        ax.get_yaxis().set_visible(False)
-
-#fig.tight_layout(pad=0.1)
-
-
-#plt.show()
+plt.show()
 
 sess.close()
